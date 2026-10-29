@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3 Big Boxes · Smooth Dynamic Follow Text</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0a0d0b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 2rem;
+      overflow: hidden; 
+    }
+
+    /* ----- PARTICLE CANVAS BACKGROUND ----- */
+    #particle-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0; 
+      pointer-events: none; 
+    }
+
+    /* container for the three boxes */
+    .boxes-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: stretch;
+      gap: 2.5rem;
+      width: 100%;
+      max-width: 1500px;
+      position: relative;
+      z-index: 10; 
+      margin-bottom: 3rem; 
+    }
+
+    /* ----- SHARED BOX STYLE (grey core) ----- */
+    .grey-box {
+      background-color: #2c2c2c;
+      background-image: radial-gradient(circle at 30% 20%, #3e3e3e, #1d1d1d);
+
+      flex: 1 1 420px;
+      min-width: 380px;
+      padding: 3rem 2.5rem;
+      border-radius: 2rem;
+
+      color: #eaeaea;
+      font-size: 1.1rem;
+      line-height: 1.6;
+
+      position: relative;
+      isolation: isolate;
+      border: 1px solid rgba(100, 255, 100, 0.15);
+
+      box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.9);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.3s ease, box-shadow 0.4s ease;
+    }
+
+    .grey-box.pulse-active {
+      transform: translateY(-10px) scale(1.02);
+      border-color: rgba(130, 255, 130, 0.6);
+      box-shadow: 
+        0 20px 40px -10px rgba(0, 0, 0, 0.9),
+        0 0 30px rgba(100, 255, 100, 0.3);
+    }
+
+    /* ----- THE GREEN SHINE ON TOP ----- */
+    .grey-box::before {
+      content: '';
+      position: absolute;
+      top: -5px;
+      left: 8%;
+      width: 84%;
+      height: 7px;
+      background: #6aff6a;
+      border-radius: 20px;
+      box-shadow: 
+        0 0 10px #6aff6a,
+        0 0 22px #4eff4e,
+        0 0 40px #2eff2e,
+        0 0 70px #1eff1e,
+        0 0 100px #0f9f0f;
+      filter: blur(1px);
+      z-index: 3;
+      pointer-events: none;
+      animation: topGlowPulse 2.4s infinite alternate ease-in-out;
+    }
+
+    /* Halo above top bar */
+    .grey-box::after {
+      content: '';
+      position: absolute;
+      top: -22px;
+      left: 10%;
+      width: 80%;
+      height: 38px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(100, 255, 100, 0.6) 0%, rgba(30, 200, 30, 0.2) 60%, transparent 90%);
+      filter: blur(12px);
+      z-index: 2;
+      pointer-events: none;
+      border-radius: 50%;
+      opacity: 0.8;
+      animation: haloPulse 2.4s infinite alternate ease-in-out;
+    }
+
+    .grey-box > * {
+      position: relative;
+      z-index: 5;
+    }
+
+    @keyframes topGlowPulse {
+      0% { box-shadow: 0 0 8px #6aff6a, 0 0 20px #4eff4e, 0 0 36px #2eff2e, 0 0 60px #1eff1e, 0 0 90px #0f9f0f; opacity: 0.9; }
+      100% { box-shadow: 0 0 15px #8aff8a, 0 0 34px #6eff6e, 0 0 60px #3eff3e, 0 0 100px #2aff2a, 0 0 140px #1eff1e; opacity: 1; }
+    }
+
+    @keyframes haloPulse {
+      0% { opacity: 0.5; transform: scaleY(0.9); }
+      100% { opacity: 0.95; transform: scaleY(1.2); }
+    }
+
+    .grey-box:hover {
+      transform: translateY(-8px) scale(1.02) !important; 
+      border-color: rgba(130, 255, 130, 0.6);
+    }
+
+    .grey-box:hover::before {
+      animation-duration: 1.2s;
+      box-shadow: 0 0 18px #8aff8a, 0 0 40px #5eff5e, 0 0 70px #3eff3e, 0 0 110px #1eff1e, 0 0 160px #0fbf0f;
+    }
+
+    /* -------------------------------------------
+       BOX ONE
+    ------------------------------------------- */
+    .cod-reward-card { display: flex; flex-direction: column; }
+    .cod-header { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 1.2rem; }
+    .cod-icon { width: 55px; height: 55px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; }
+    .cod-icon img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .cod-icon .fallback-text { color: #fff; font-weight: 900; font-size: 1.8rem; font-family: monospace; position: absolute; z-index: -1; }
+    .cod-title-group { flex-grow: 1; }
+    .cod-title { font-size: 1.5rem; font-weight: 700; color: #ffffff; margin: 0; line-height: 1.2; }
+    .cod-subtitle { font-size: 1rem; color: #999; margin: 0; }
+    .cod-how-to-earn { font-weight: 700; color: #ffffff; font-size: 1.2rem; margin-top: 0.6rem; }
+    .cod-description { color: #b0b0b0; font-size: 1.1rem; line-height: 1.5; margin-bottom: 0.6rem; }
+    .cod-reward-img { width: 90px; height: 90px; background-color: #1a1a1a; border-radius: 8px; margin: 0.4rem 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #444; position: relative; }
+    .cod-reward-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cod-reward-img .fallback-skull { font-size: 3.2rem; filter: sepia(1) hue-rotate(20deg) brightness(0.8); position: absolute; z-index: -1; }
+    .cod-date { display: flex; align-items: center; gap: 0.8rem; font-size: 1rem; font-weight: 600; color: #e0e0e0; margin-top: 1rem; }
+    .cod-timer-bottom { margin-top: auto; padding-top: 1.5rem; }
+    .cod-timer-bottom h4 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #8aff8a; margin-bottom: 0.8rem; font-weight: 700; }
+    .countdown-container { display: flex; gap: 1rem; }
+    .time-box { display: flex; flex-direction: column; align-items: center; background: rgba(0, 0, 0, 0.4); padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid rgba(100, 255, 100, 0.2); min-width: 60px; }
+    .time-box span:first-child { font-size: 1.4rem; font-weight: 800; color: #ffffff; line-height: 1; }
+    .time-box span:last-child { font-size: 0.65rem; color: #999; text-transform: uppercase; margin-top: 0.3rem; font-weight: 600; }
+
+    /* -------------------------------------------
+       BOX TWO
+    ------------------------------------------- */
+    .level-box-content { display: flex; flex-direction: column; gap: 1.5rem; text-align: left; }
+    .level-header { display: flex; flex-direction: column; gap: 0.2rem; }
+    .title-and-icon { display: flex; align-items: center; gap: 0.8rem; }
+    .title-and-icon h3 { font-size: 1.5rem; color: #fff; margin: 0; }
+    .level-header p { font-size: 1rem; color: #aaa; margin: 0; }
+    .level-70-icon { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .level-70-icon img { width: 100%; height: 100%; object-fit: contain; }
+    .slider-container { margin-top: 1rem; width: 100%; overflow: hidden; position: relative; background: #1a1a1a; border-radius: 12px; padding: 1.2rem 0; border: 1px solid #444; }
+    .slider-track { display: flex; gap: 1.2rem; width: max-content; animation: scrollLeft 10s linear infinite; padding-left: 1.2rem; }
+    .slider-container:hover .slider-track { animation-play-state: paused; }
+    .pic-spot { width: 90px; height: 90px; background: #2a2a2a; border-radius: 10px; border: 2px dashed #555; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.9rem; font-weight: 600; flex-shrink: 0; transition: border-color 0.2s, background 0.2s; cursor: pointer; overflow: hidden; }
+    .pic-spot img { width: 75%; height: 75%; object-fit: contain; display: block; }
+    .pic-spot:hover { border-color: #6aff6a; background: #333; color: #aaffaa; }
+    @keyframes scrollLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    /* -------------------------------------------
+       BOX THREE
+    ------------------------------------------- */
+    .gameplay-box-content { display: flex; flex-direction: column; gap: 1.2rem; text-align: left; }
+    .gameplay-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+    .gameplay-title-wrapper { display: flex; align-items: center; gap: 0.8rem; }
+    .gameplay-title-wrapper img { width: 32px; height: 32px; object-fit: contain; }
+    .gameplay-title-wrapper h3 { font-size: 1.6rem; color: #ffffff; margin: 0; font-weight: 700; letter-spacing: 0.5px; text-shadow: 0 0 10px rgba(100, 255, 100, 0.2); }
+    .live-badge { background: #ff3333; color: white; font-size: 0.8rem; font-weight: 800; padding: 0.3rem 0.8rem; border-radius: 6px; letter-spacing: 0.5px; animation: pulseLive 1.5s infinite alternate ease-in-out; box-shadow: 0 0 12px rgba(255, 50, 50, 0.6); }
+    @keyframes pulseLive { 0% { opacity: 0.7; } 100% { opacity: 1; box-shadow: 0 0 18px rgba(255, 50, 50, 0.9); } }
+    
+    .video-wrapper { width: 100%; aspect-ratio: 1920 / 1080; background-color: #111; border-radius: 12px; border: 2px dashed rgba(100, 255, 100, 0.3); position: relative; overflow: hidden; transition: border-color 0.3s; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; }
+    .video-wrapper:hover { border-color: rgba(100, 255, 100, 0.8); }
+    .video-wrapper iframe { width: 100%; height: 100%; border: none; border-radius: 10px; display: block; }
+    .gameplay-desc-text { font-size: 1.05rem; color: #cccccc; font-weight: 500; margin-bottom: 0.8rem; line-height: 1.4; }
+    .gameplay-divider { width: 100%; height: 1px; background: linear-gradient(90deg, rgba(100, 255, 100, 0) 0%, rgba(100, 255, 100, 0.3) 50%, rgba(100, 255, 100, 0) 100%); margin-bottom: 0.2rem; }
+
+    /* -------------------------------------------
+       DYNAMIC FOLLOW TEXT
+    ------------------------------------------- */
+    .follow-container {
+      position: relative;
+      z-index: 10;
+      margin-top: 1rem;
+      margin-bottom: 2rem;
+      text-align: center;
+      font-size: 3.5rem; 
+      font-weight: 900;
+      font-family: "Impact", "Arial Black", sans-serif;
+      letter-spacing: 2px;
+      color: #ffffff;
+      text-transform: uppercase;
+      text-shadow: 
+        0 0 20px rgba(100, 255, 100, 0.8),
+        0 0 40px rgba(100, 255, 100, 0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1.2rem;
+      width: 100%;
+      height: 120px; 
+    }
+
+    .follow-container > span {
+      display: inline-block;
+      opacity: 0; 
+    }
+
+    .follow-container .green-text {
+      color: #6aff6a;
+    }
+
+    /* Style for the image next to 0xsecret */
+    .follow-name-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem; /* Space between the image and the 0xsecret text */
+    }
+
+    .follow-name-wrapper img {
+      height: 60px; /* Adjust this to make the image bigger/smaller */
+      width: auto;
+      object-fit: contain;
+    }
+
+    /* --- SMOOTHER ANIMATION CLASSES --- */
+    .anim-slide-left {
+      animation: slideLeft 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+    @keyframes slideLeft {
+      0% { transform: translateX(-50vw); opacity: 0; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+
+    .anim-fade-up {
+      animation: fadeUp 1.2s cubic-bezier(0.25, 1, 0.5, 1) 0.3s forwards;
+    }
+    @keyframes fadeUp {
+      0% { transform: translateY(50px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+
+    .anim-slide-right {
+      animation: slideRight 1.2s cubic-bezier(0.25, 1, 0.5, 1) 0.6s forwards;
+    }
+    @keyframes slideRight {
+      0% { transform: translateX(50vw); opacity: 0; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+
+    .anim-pop-in {
+      animation: popIn 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    @keyframes popIn {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .anim-drop-down {
+      animation: dropDown 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+    @keyframes dropDown {
+      0% { transform: translateY(-100px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+
+    @media (max-width: 1450px) {
+      .grey-box { flex: 1 1 100%; max-width: 700px; margin: 0 auto; }
+      .boxes-row { flex-direction: column; align-items: center; }
+      .follow-container { font-size: 2rem; flex-wrap: wrap; gap: 0.5rem; height: auto; }
+      .follow-name-wrapper img { height: 40px; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="particle-canvas"></canvas>
+
+  <div class="boxes-row">
+    
+    <!-- BOX ONE -->
+    <div class="grey-box">
+      <div class="cod-reward-card">
+        <div class="cod-header">
+          <div class="cod-icon">
+            <img src="skull.webp" alt="Icon" onerror="this.style.display='none'">
+            <span class="fallback-text">K</span>
+          </div>
+          <div class="cod-title-group">
+            <h2 class="cod-title">Modern Warfare 4</h2>
+            <p class="cod-subtitle">1 reward to earn</p>
+          </div>
+        </div>
+        <div class="cod-how-to-earn">How to earn</div>
+        <div class="cod-description">
+          Get rewards by watching 0xSecret while they are live in Call of Duty: Modern Warfare 4
+        </div>
+        <div class="cod-reward-img">
+          <img src="skull.webp" alt="Reward" onerror="this.style.display='none'">
+          <span class="fallback-skull">💀</span>
+        </div>
+        <div class="cod-date">Ends on Nov 23, 2026</div>
+        <div class="cod-timer-bottom">
+          <h4>Time Remaining</h4>
+          <div class="countdown-container" id="countdown">
+            <div class="time-box"><span id="days">00</span><span>Days</span></div>
+            <div class="time-box"><span id="hours">00</span><span>Hours</span></div>
+            <div class="time-box"><span id="minutes">00</span><span>Mins</span></div>
+            <div class="time-box"><span id="seconds">00</span><span>Secs</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOX TWO -->
+    <div class="grey-box">
+      <div class="level-box-content">
+        <div class="level-header">
+          <div class="title-and-icon">
+            <div class="level-70-icon">
+              <img src="70.png" alt="Level 70">
+            </div>
+            <h3>Levels</h3>
+          </div>
+          <p>Get levels by watching a stream</p>
+        </div>
+        <div class="cod-how-to-earn" style="margin-top: 0.5rem;">Info</div>
+        <div class="cod-description" style="margin-bottom: 1rem;">
+          Earn XP and climb the ranks! Every minute you watch an active stream contributes to your level progression. Reach new tiers to unlock exclusive perks.
+        </div>
+        <div class="slider-container">
+          <div class="slider-track">
+            <div class="pic-spot"><img src="1.png" alt="Level 1"></div>
+            <div class="pic-spot"><img src="10.png" alt="Level 10"></div>
+            <div class="pic-spot"><img src="20.png" alt="Level 20"></div>
+            <div class="pic-spot"><img src="30.png" alt="Level 30"></div>
+            <div class="pic-spot"><img src="40.png" alt="Level 40"></div>
+            <div class="pic-spot"><img src="50.png" alt="Level 50"></div>
+            <div class="pic-spot"><img src="60.png" alt="Level 60"></div>
+            <div class="pic-spot"><img src="70.png" alt="Level 70"></div>
+            <!-- Duplicated -->
+            <div class="pic-spot"><img src="1.png" alt="Level 1"></div>
+            <div class="pic-spot"><img src="10.png" alt="Level 10"></div>
+            <div class="pic-spot"><img src="20.png" alt="Level 20"></div>
+            <div class="pic-spot"><img src="30.png" alt="Level 30"></div>
+            <div class="pic-spot"><img src="40.png" alt="Level 40"></div>
+            <div class="pic-spot"><img src="50.png" alt="Level 50"></div>
+            <div class="pic-spot"><img src="60.png" alt="Level 60"></div>
+            <div class="pic-spot"><img src="70.png" alt="Level 70"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOX THREE -->
+    <div class="grey-box">
+      <div class="gameplay-box-content">
+        <div class="gameplay-title-row">
+          <div class="gameplay-title-wrapper">
+            <img src="broadcaster.svg" alt="Gameplay Icon" onerror="this.style.display='none'">
+            <h3>Gameplay</h3>
+          </div>
+          <div class="live-badge">LIVE</div>
+        </div>
+        <div class="video-wrapper">
+          <iframe 
+            src="https://www.youtube-nocookie.com/embed/q2o7W8Nsg90?autoplay=1&mute=1&loop=1&playlist=q2o7W8Nsg90" 
+            title="YouTube video player" 
+            referrerpolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            allowfullscreen>
+          </iframe>
+        </div>
+        <div class="gameplay-desc-text">
+          This is Call of Duty: Modern Warfare 4 gameplay
+        </div>
+        <div class="gameplay-divider"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BIG FOLLOW TEXT -->
+  <div class="follow-container" id="follow-text">
+    <span id="part1">Follow</span>
+    
+    <!-- WRAPPER FOR THE NAME AND IMAGE -->
+    <span id="part2" class="green-text">
+      <div class="follow-name-wrapper">
+        <!-- REPLACE 'kick.png' WITH YOUR IMAGE FILE NAME -->
+        <img src="verified.svg" alt="Icon" onerror="this.style.display='none'">
+        0xsecret
+      </div>
+    </span>
+    
+    <span id="part3">on kick !</span>
+  </div>
+
+  <!-- Countdown Timer Script -->
+  <script>
+    const countDownDate = new Date("Nov 23, 2026 00:00:00").getTime();
+
+    const x = setInterval(function() {
+      const now = new Date().getTime();
+      const distance = countDownDate - now;
+
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      document.getElementById("days").innerText = String(days).padStart(2, '0');
+      document.getElementById("hours").innerText = String(hours).padStart(2, '0');
+      document.getElementById("minutes").innerText = String(minutes).padStart(2, '0');
+      document.getElementById("seconds").innerText = String(seconds).padStart(2, '0');
+
+      if (distance < 0) {
+        clearInterval(x);
+        document.getElementById("countdown").innerHTML = "<div style='color: #ff3333; font-weight: bold;'>EXPIRED</div>";
+      }
+    }, 1000);
+  </script>
+
+  <!-- Background Particles Script -->
+  <script>
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let width, height;
+    let particles = [];
+    const particleCount = 70; 
+    const maxVelocity = 0.5;
+    const mouseRadius = 120; 
+
+    const mouse = { x: null, y: null };
+
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    window.addEventListener('mouseleave', () => {
+      mouse.x = null;
+      mouse.y = null;
+    });
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.vx = (Math.random() - 0.5) * maxVelocity;
+        this.vy = (Math.random() - 0.5) * maxVelocity;
+        this.radius = Math.random() * 2.5 + 1;
+        this.color = `rgba(100, 255, 100, ${Math.random() * 0.5 + 0.2})`;
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.x < 0 || this.x > width) this.vx *= -1;
+        if (this.y < 0 || this.y > height) this.vy *= -1;
+
+        if (mouse.x != null && mouse.y != null) {
+          let dx = this.x - mouse.x;
+          let dy = this.y - mouse.y;
+          let distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < mouseRadius) {
+            let forceDirectionX = dx / distance;
+            let forceDirectionY = dy / distance;
+            let force = (mouseRadius - distance) / mouseRadius;
+            this.x += forceDirectionX * force * 5;
+            this.y += forceDirectionY * force * 5;
+          }
+        }
+      }
+    }
+
+    function init() {
+      particles = [];
+      for (let i = 0; i < particleCount; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      ctx.fillStyle = 'rgba(10, 13, 11, 0.4)'; 
+      ctx.fillRect(0, 0, width, height);
+
+      particles.forEach(particle => {
+        particle.update();
+        particle.draw();
+      });
+
+      ctx.strokeStyle = 'rgba(100, 255, 100, 0.05)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          let dx = particles[i].x - particles[j].x;
+          let dy = particles[i].y - particles[j].y;
+          let distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance < 120) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    init();
+    animate();
+  </script>
+
+  <!-- Auto-Cycling Box Animation Script -->
+  <script>
+    const boxes = document.querySelectorAll('.grey-box');
+    let currentBoxIndex = 0;
+    let animationInterval;
+    let isHovered = false;
+
+    function cycleBoxes() {
+      if (isHovered) return; 
+
+      boxes.forEach(box => box.classList.remove('pulse-active'));
+      boxes[currentBoxIndex].classList.add('pulse-active');
+      currentBoxIndex = (currentBoxIndex + 1) % boxes.length;
+    }
+
+    function startAnimation() {
+      clearInterval(animationInterval);
+      animationInterval = setInterval(cycleBoxes, 2500);
+    }
+
+    boxes.forEach(box => {
+      box.addEventListener('mouseenter', () => {
+        isHovered = true;
+        boxes.forEach(b => b.classList.remove('pulse-active'));
+      });
+      
+      box.addEventListener('mouseleave', () => {
+        isHovered = false;
+        currentBoxIndex = Array.from(boxes).indexOf(box);
+      });
+    });
+
+    startAnimation();
+  </script>
+
+  <!-- Dynamic Text Animation Script -->
+  <script>
+    const part1 = document.getElementById('part1');
+    const part2 = document.getElementById('part2');
+    const part3 = document.getElementById('part3');
+    
+    const animations = [
+      { 1: 'anim-slide-left', 2: 'anim-fade-up', 3: 'anim-slide-right' },
+      { 1: 'anim-drop-down', 2: 'anim-pop-in', 3: 'anim-drop-down' },
+      { 1: 'anim-slide-right', 2: 'anim-fade-up', 3: 'anim-slide-left' },
+      { 1: 'anim-pop-in', 2: 'anim-pop-in', 3: 'anim-pop-in' }
+    ];
+
+    let currentPattern = 0;
+
+    function runAnimation() {
+      const pattern = animations[currentPattern];
+
+      part1.className = ''; 
+      part2.className = 'green-text'; 
+      part3.className = '';
+
+      void part1.offsetWidth; 
+
+      part1.classList.add(pattern[1]);
+      part2.classList.add(pattern[2]);
+      part3.classList.add(pattern[3]);
+
+      currentPattern = (currentPattern + 1) % animations.length;
+    }
+
+    runAnimation();
+    setInterval(runAnimation, 30000);
+  </script>
+</body>
+</html>
